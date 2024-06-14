@@ -100,9 +100,9 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
     rstan::sampling(m_stan, data = dat_stan,
                     warmup = iter / 2, iter = iter, save_warmup = FALSE,
                     chains = chains, cores = cores,
-                    pars = c("ar_s", "cr_s_mf", "ar_mf", "cr_mf_s",
-                             "ic_s", "ic_m", "resvar_s",
-                             "resvar_mf", "resvar_m")
+                    pars = c("ar_mf", "cr_mf_s", "ar_s", "cr_s_mf",
+                             "ic_s", "ic_m", "resvar_m",
+                             "resvar_mf", "resvar_s")
     ), error = function(e) e
   )
   
@@ -231,19 +231,8 @@ readStanResults <- function (r, days, beeps, modelout, true) {
   return(out)
 }
 
-diagnostics <- function (clus, r, res, true) {
-  bias <- parallel::parSapply(cl = clus, 1:r, .bias, res = res, true = true)
+diagnostics <- function (reps, res, true) {
   
-  bias_average <- parallel::parApply(cl = clus, abs(bias), 1, mean)
-  
-  coverage <- parallel::parSapply(cl = clus, 1:r, .coverage, res = res, true = true)
-  
-  coverage_rate <- parallel::parApply(cl = clus, coverage, 1, .proportion)
-
-  return(data.frame(bias = bias_average, coverage = coverage_rate))
-}
-
-diagnosticsNoPar <- function (reps, res, true) {
   deviance <- sapply(1:reps, .deviance, res = res, true = true)
   
   bias <- apply(deviance, 1, mean)
@@ -257,31 +246,12 @@ diagnosticsNoPar <- function (reps, res, true) {
   
   return(df)
   
-  
-  # bias <- sapply(1:r, .bias, res = res, true = true)
-  # 
-  # bias_average <- apply(bias, 1, mean)
-  # bias_average_abs <- apply(abs(bias), 1, mean)
-  # 
-  # coverage <- sapply(1:r, .coverage, res = res, true = true)
-  # 
-  # coverage_rate <- apply(coverage, 1, .proportion)
-  # 
-  # return(data.frame(bias = bias_average, bias_abs = bias_average_abs, coverage = coverage_rate))
 }
 
 .deviance <- function (r, res, true) {
   out <- res[[r]]$median - true
   return(out)
 }
-
-# .bias <- function (r, res, true) {
-#   out <- tryCatch({
-#     bias <- res[[r]]$median - true
-#   }, error = function(e) return(NA))
-#   
-#   return(out)
-# }
 
 .coverage <- function (r, res, true) {
   out <- tryCatch({
@@ -297,89 +267,4 @@ diagnosticsNoPar <- function (reps, res, true) {
   }, error = function(e) return(NA))
   
   return(out)
-}
-
-.deviancePlot <- function (res, true, pars) {
-
-  df_deviance <- data.frame(matrix(NA, nrow = length(res), ncol = nrow(res[[1]])))
-
-  for (i in 1:length(res)) {
-      df_deviance[i, ] <- res[[i]][, "median"]
-  }
-  names(df_deviance) <- names(true)
-
-  df_long <- tidyr::pivot_longer(df_deviance, cols = tidyselect::all_of(pars), names_to = "parameter", values_to = "deviance")
-  df_vline <- data.frame(parameter = pars,
-                         true = true[pars],
-                         median = apply(df_deviance[, pars], 2, median))
-  
-  label_names <- ggplot2::as_labeller(c('ar_eta' = "Autoregression eta",
-                                        'ar_s'= "Autoregression s",
-                                        'cr_eta_s'= "Crossregression eta <- s",
-                                        'cr_s_eta' = "Cross-lagged regression s <- eta"))
-  
-  p <- ggplot2::ggplot(df_long) +
-    ggplot2::geom_density(ggplot2::aes(x = deviance), colour = "red", fill = "red", alpha = 0.2) +
-    ggplot2::facet_wrap(~ parameter, nrow = 1, labeller = label_names) +
-    ggplot2::geom_vline(data = df_vline, mapping = ggplot2::aes(xintercept = true)) +
-    ggplot2::geom_vline(data = df_vline, mapping = ggplot2::aes(xintercept = median), colour = "red", linetype = "dashed") +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(legend.position = "bottom",
-                   axis.text.y = ggplot2::element_blank(),
-                   panel.grid = ggplot2::element_blank(),
-                   axis.ticks.x = ggplot2::element_line()) +
-    ggplot2::labs(x = "Estimated", y = "Density")
-  
-  return(p)
-
-}
-
-.deviancePlotBoth <- function (res_mplus, res_stan, true, pars) {
-  
-  reps <- length(res_mplus)
-  n_pars <- nrow(res_mplus[[1]])
-  deviance_mplus <- data.frame(matrix(NA, nrow = reps, ncol = n_pars))
-  deviance_stan <- data.frame(matrix(NA, nrow = reps, ncol = n_pars))
-  
-  for (i in 1:reps) {
-    deviance_mplus[i, ] <- res_mplus[[i]][, "median"]
-    deviance_stan[i, ] <- res_stan[[i]][, "median"]
-  }
-  names(deviance_mplus) <- names(true)
-  names(deviance_stan) <- names(true)
-  
-  df_long_mplus <- tidyr::pivot_longer(deviance_mplus, cols = tidyselect::all_of(pars), names_to = "parameter", values_to = "deviance")
-  df_long_stan <- tidyr::pivot_longer(deviance_stan, cols = tidyselect::all_of(pars), names_to = "parameter", values_to = "deviance")
-  df_long_mplus$software <- "mplus"
-  df_long_stan$software <- "stan"
-  
-  df_merge <- rbind(df_long_mplus, df_long_stan)
-  
-  df_vline <- data.frame(parameter = pars,
-                         true = true[pars],
-                         median_mplus = apply(deviance_mplus[, pars], 2, median),
-                         median_stan = apply(deviance_stan[, pars], 2, median))
-  
-  label_names <- ggplot2::as_labeller(c('ar_eta' = "Autoregression eta",
-                                        'ar_s'= "Autoregression s",
-                                        'cr_eta_s'= "Crossregression eta <- s",
-                                        'cr_s_eta' = "Cross-lagged regression s <- eta"))
-  
-  p <- ggplot2::ggplot(df_merge) +
-    ggplot2::geom_density(ggplot2::aes(x = deviance, colour = software, fill = software), alpha = 0.2) +
-    ggplot2::scale_colour_manual(values = c("blue", "red")) +
-    ggplot2::scale_fill_manual(values = c("blue", "red")) +
-    ggplot2::facet_wrap(~ parameter, nrow = 1, labeller = label_names) +
-    ggplot2::geom_vline(data = df_vline, mapping = ggplot2::aes(xintercept = true)) +
-    ggplot2::geom_vline(data = df_vline, mapping = ggplot2::aes(xintercept = median_mplus), colour = "blue", linetype = "dashed") +
-    ggplot2::geom_vline(data = df_vline, mapping = ggplot2::aes(xintercept = median_stan), colour = "red", linetype = "dashed") +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(legend.position = "bottom",
-                   axis.text.y = ggplot2::element_blank(),
-                   panel.grid = ggplot2::element_blank(),
-                   axis.ticks.x = ggplot2::element_line()) +
-    ggplot2::labs(x = "Estimated", y = "Density", colour = "Software", fill = "Software")
-  
-  return(p)
-  
 }

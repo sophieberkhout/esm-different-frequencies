@@ -26,7 +26,7 @@ for (days in n_days) {
       res_stan <- lapply(1:reps, readStanResults, days = days, beeps = beeps,
                          modelout = modelout, true = true)
       
-      diag_stan <- diagnosticsNoPar(reps, res_stan, true)
+      diag_stan <- diagnostics(reps, res_stan, true)
       diag_stan$days <- days
       diag_stan$beeps <- beeps
       diag_stan$software <- "Stan"

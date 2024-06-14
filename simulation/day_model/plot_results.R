@@ -50,8 +50,8 @@ p <- ggplot2::ggplot(df_plot_long) +
     axis.title = ggplot2::element_blank(),
     axis.title.x = ggplot2::element_text(size = 12),
     axis.text = ggplot2::element_text(margin = ggplot2::margin(5, 5, 5, 5)),
-    axis.ticks = ggplot2::element_line(lineend = "butt",
-                              linewidth = 0.5),
+    axis.text.y = ggplot2::element_text(hjust = 1),
+    axis.ticks = ggplot2::element_line(lineend = "butt", linewidth = 0.5),
     axis.ticks.length = ggplot2::unit(2.5, "pt"),
     strip.text = ggplot2::element_text(margin = ggplot2::margin(0, 5, 0, 5), size = 12),
     strip.text.y = ggplot2::element_text(angle = 270),
@@ -67,7 +67,7 @@ p <- ggplot2::ggplot(df_plot_long) +
                         linewidth = 0.3, lineend = "square")
 
 ggplot2::ggsave("simulation/day_model/parameter_recovery.pdf", p,
-                width = 9, height = 4)
+                width = 6, height = 4)
 
 
 df_plot <- subset(df, grepl("ic_m", par))
@@ -124,8 +124,8 @@ p_ic <- ggplot2::ggplot(df_plot_long) +
     axis.text = ggplot2::element_text(margin = ggplot2::margin(5, 5, 5, 5)),
     axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1.2, size = 11,
                                         margin = ggplot2::margin(5, 0, -5, 0)),
-    axis.ticks = ggplot2::element_line(lineend = "butt",
-                                       linewidth = 0.5),
+    axis.text.y = ggplot2::element_text(hjust = 1),
+    axis.ticks = ggplot2::element_line(lineend = "butt", linewidth = 0.5),
     axis.ticks.length = ggplot2::unit(2.5, "pt"),
     strip.text = ggplot2::element_text(margin = ggplot2::margin(0, 5, 0, 5), size = 12),
     strip.text.y = ggplot2::element_text(angle = 270),
