@@ -4,8 +4,7 @@ cores <- 1
 thin <- 10
 defaultPriors <- TRUE
 
-# n_threads <- 36
-n_threads <- 3
+n_threads <- 36
 
 clus <- parallel::makeCluster(n_threads)
 
@@ -16,8 +15,6 @@ evq <- parallel::clusterEvalQ(clus, source("simulation/beep_model/utils.R"))
 modelout <- paste0("simulation/beep_model/modelout")
 
 load("simulation/beep_model/simulation_settings.RData")
-
-reps <- 1 # TEMP
 
 for (days in n_days) {
   for(beeps in n_beeps) {
