@@ -1,0 +1,9 @@
+.Rhistory
+simulation/day_model/modelout/
+simulation/day_model/data/
+simulation/beep_model/modelout/
+simulation/beep_model/data/
+simulation/combi_model/modelout/
+simulation/combi_model/data/
+example/data/
+example/results/
