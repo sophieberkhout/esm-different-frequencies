@@ -38,9 +38,13 @@ mplus_df <- subset(out$parameters$unstandardized,
 
 ggplot2::ggplot(mplus_df) +
   ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_2.5ci, ymax = upper_2.5ci, x = 1:10), fill = "grey75") +
-  # ggplot2::geom_ribbon(ggplot2::aes(ymin = lower, ymax = upper, x = 1:10), fill = "red") +
-  ggplot2::geom_line(ggplot2::aes(x = 1:10, y = est)) +
-  ggplot2::geom_point(ggplot2::aes(x = 1:10, y = est), shape = 21, fill = "white", size = 3)
+  ggplot2::geom_line(ggplot2::aes(x = 1:10, y = est), linewidth = 1) +
+  ggplot2::geom_point(ggplot2::aes(x = 1:10, y = est), shape = 21, fill = "white", size = 2, stroke = 1)
+
+ggplot2::ggplot(mplus_df) +
+  # ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_2.5ci, ymax = upper_2.5ci, x = 1:10), fill = "grey75") +
+  ggplot2::geom_line(ggplot2::aes(x = 1:10, y = est), linewidth = 1) +
+  ggplot2::geom_pointrange(ggplot2::aes(x = 1:10, y = est, ymin = lower_2.5ci, ymax = upper_2.5ci), shape = 21, fill = "white", size = 1, stroke = 2, linewidth = 1)
 
 
 out_stan <- readRDS("example/results/day_model/stan_fit.rds")

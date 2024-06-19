@@ -1,4 +1,3 @@
-setwd("C:/Users/Berkh011/Documents/GitHub/different-timescales")
 source("simulation/beep_model/utils.R")
 
 load("simulation/beep_model/simulation_settings.RData")
@@ -11,14 +10,14 @@ for (days in n_days) {
     t_read <- system.time({
       
       true <- pars
-      true$ic_m <- rep(pars$ic_m, beeps)
-      true$resvar_m <- rep(pars$resvar_m, beeps)
+      # true$ic_m <- rep(pars$ic_m, beeps)
+      # true$resvar_m <- rep(pars$resvar_m, beeps)
       true <- unlist(true)
       
       res_mplus <- lapply(1:reps, readMplusResults, days = days, beeps = beeps,
                             modelout = modelout, true = true)
       
-      diag_mplus <- diagnosticsNoPar(reps, res_mplus, true)
+      diag_mplus <- diagnostics(reps, res_mplus, true)
       diag_mplus$days <- days
       diag_mplus$beeps <- beeps
       diag_mplus$software <- "Mplus"
@@ -34,7 +33,7 @@ for (days in n_days) {
       df_diagnostics <- rbind(df_diagnostics, diag_mplus, diag_stan)
       
     })
-    print(sprintf("%s min elapsed", round(t_fit[3] / 60, digits = 1)))
+    print(sprintf("%s min elapsed", round(t_read[3] / 60, digits = 1)))
   }
 }
 

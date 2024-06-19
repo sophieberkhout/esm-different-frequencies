@@ -19,17 +19,17 @@ simulateData <- function (r, days, beeps, burnin, pars, file) {
 
   # simulate data
   for (d in 2:samples) {
-    s[d] <- pars$ar_s * s[d - 1] + pars$cr_s_m * m[d - 1, beeps] + zeta_s[d]
-    m[d, 1] <- pars$ar_night_m * m[d - 1, beeps] + pars$cr_m_s * s[d] + zeta_m[d, 1]
+    s[d] <- pars$ic_s + pars$ar_s * s[d - 1] + pars$cr_s_m * m[d - 1, beeps] + zeta_s[d]
+    m[d, 1] <- pars$ic_m + pars$ar_night_m * m[d - 1, beeps] + pars$cr_m_s * s[d] + zeta_m[d, 1]
     
     for (b in 2:beeps) {
-      m[d, b] <- pars$ar_m * m[d, b - 1] + zeta_m[d, b]
+      m[d, b] <- pars$ic_m + pars$ar_m * m[d, b - 1] + zeta_m[d, b]
     }  
   }
   
   # add intercepts / measurement error
-  s <- s + pars$ic_s
-  m <- pars$ic_m + m
+  # s <- s + pars$ic_s
+  # m <- pars$ic_m + m
   colnames(m) <- paste0("m", 1:beeps)
   df <- data.frame(s, m)
   
@@ -119,6 +119,7 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
   
   VARIABLE <- sprintf("
   USEVARIABLES = s m1-m%1$s;
+  LAGGED = s(1) m%1$s(1);
   ", beeps)
   
   ANALYSIS <- sprintf("
@@ -134,33 +135,26 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
      ifelse(is.null(biter), "", paste0("BITER = ", biter, ";")))
   
   MODEL <- sprintf("
-    ! center m
-    %1$s \n
-    c_m%2$s BY m%2$s (&1);
-    m1-m%2$s@0.01;
-    c_m1-c_m%2$s(resvar_m1-resvar_m%2$s);
-    [m1-m%2$s](ic_m1-ic_m%2$s);
+    m1-m%1$s(resvar_m);
+    [m1-m%1$s](ic_m);
 
-    c_s BY s (&1);                ! center s
     [s](ic_s);                    ! s intercept
-    s@0.01;                       ! residual variance of s close to zero
-    c_s(resvar_s);                ! centered s residual variance
+    s(resvar_s);                  ! s residual variance
 
-    c_m2-c_m%2$s PON c_m1-c_m%3$s(ar_m); ! day beep autoregression
+    m2-m%1$s PON m1-m%2$s(ar_m);  ! day beep autoregression
 
-    c_m1 ON c_m%2$s&1(ar_night_m); ! night beep autoregression
-    c_m1 ON c_s(cr_m_s);         ! first beep of the day on sleep last night
+    m1 ON m%1$s&1(ar_night_m);    ! night beep autoregression
+    m1 ON s(cr_m_s);              ! first beep of the day on sleep last night
 
-    c_s ON c_s&1(ar_s);          ! sleep autoregression
-    c_s ON c_m%2$s&1(cr_s_m);      ! sleep on last beep of yesterday
-  ", as.character(paste(sprintf("c_m%1$s BY m%1$s;", 1:(beeps - 1)), collapse = " \n ")),
-     beeps, beeps - 1)
+    s ON s&1(ar_s);               ! sleep autoregression
+    s ON m%1$s&1(cr_s_m);         ! sleep on last beep of yesterday
+  ", beeps, beeps - 1)
   
   PRIORS <- NULL
   if (!defaultPriors) {
     PRIORS <- sprintf("
-    DO (1,%1$s) resvar_m#~IG(0.001,0.001);
-    DO (1,%1$s) ic_m#~N(0.000,100);
+    resvar_m~IG(0.001,0.001);
+    ic_m~N(0.000,100);
     ar_m~N(0.000,100);
     ar_night_m~N(0.000,100);
     cr_m_s~N(0.000,100);
@@ -177,7 +171,6 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
   
   PLOT <- "
   TYPE = PLOT3;
-  FACTOR = ALL;
   "
   
   return(
@@ -199,9 +192,10 @@ readMplusResults <- function (r, days, beeps, modelout, true) {
                                                modelout, days, beeps, r))
 
     df <- subset(fit$parameters$unstandardized,
-                 paramHeader == "C_M.ON" | paramHeader == "C_S.ON" | paramHeader == "Intercepts" | (paramHeader == "Residual.Variances" & param != "S"), 
+                 # paramHeader == "C_M.ON" | paramHeader == "C_S.ON" | paramHeader == "Intercepts" | (paramHeader == "Residual.Variances" & param != "S"), 
                  select = c("est", "posterior_sd", "lower_2.5ci", "upper_2.5ci"))
-    
+    idx <- c(5, 1:4, 13, 14, 24, 23)
+    df  <- df[idx, ]
     names(df) <- c("median", "sd", "lower", "upper")
     
     df$true <- true
@@ -221,10 +215,10 @@ readStanResults <- function (r, days, beeps, modelout, true) {
     # df <- sfit[-nrow(sfit), c("50%", "sd", "2.5%", "97.5%")]
     
     # have to use annoying idx to get same order of pars...
-    if (beeps == 3) idx <- c(3:4, 1:2, 5:8, 11:13, 10, 9)
-    if (beeps == 5) idx <- c(3:4, 1:2, 5:10, 13:17, 12, 11)
-    if (beeps == 9) idx <- c(3:4, 1:2, 5:14, 17:25, 16, 15)
-    df <- sfit[idx, c("50%", "sd", "2.5%", "97.5%")]
+    # if (beeps == 3) idx <- c(3:4, 1:2, 5:8, 11:13, 10, 9)
+    # if (beeps == 5) idx <- c(3:4, 1:2, 5:10, 13:17, 12, 11)
+    # if (beeps == 9) idx <- c(3:4, 1:2, 5:14, 17:25, 16, 15)
+    df <- sfit[-nrow(sfit), c("50%", "sd", "2.5%", "97.5%")]
     df <- as.data.frame(df)
     names(df) <- c("median", "sd", "lower", "upper")
     

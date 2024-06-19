@@ -9,13 +9,13 @@ source("simulation/beep_model/utils.R")
 n_days <- c(14, 28, 56, 112)
 n_beeps <- c(3, 5, 9)
 
-pars <- list(ar_m = 0.4,
-             ar_night_m = 0.6,
-             cr_m_s = -0.4,
+pars <- list(ar_m = 0.5,
+             ar_night_m = 0.8,
+             cr_m_s = -0.1,
              ar_s = -0.2,
-             cr_s_mf = -0.3,
-             ic_s = 4,
-             ic_m = 2,
+             cr_s_m = -0.3,
+             ic_s = 6,
+             ic_m = 1,
              resvar_m = 0.75,
              resvar_s = 1)
 

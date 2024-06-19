@@ -18,7 +18,7 @@ for (days in n_days) {
       res_mplus <- lapply(1:reps, readMplusResults, days = days, beeps = beeps,
                             modelout = modelout, true = true)
       
-      diag_mplus <- diagnosticsNoPar(reps, res_mplus, true)
+      diag_mplus <- diagnostics(reps, res_mplus, true)
       diag_mplus$days <- days
       diag_mplus$beeps <- beeps
       diag_mplus$software <- "Mplus"
