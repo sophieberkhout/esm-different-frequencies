@@ -59,7 +59,7 @@ simulateData <- function (r, days, beeps, burnin, pars, file) {
 fitMplusModel <- function (r, days, beeps, m_mplus, iter, chains, cores, modelout) {
   
   dat <- readRDS(
-    sprintf("simulation/day_model/data/dat_days_%s_beeps_%s_r_%s.rds",
+    sprintf("simulation/day_model/data2/dat_days_%s_beeps_%s_r_%s.rds",
             days, beeps, r)
   )
 
@@ -89,7 +89,7 @@ fitMplusModel <- function (r, days, beeps, m_mplus, iter, chains, cores, modelou
 fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout) {
   
   dat <- readRDS(
-    sprintf("simulation/day_model/data/dat_days_%s_beeps_%s_r_%s.rds",
+    sprintf("simulation/day_model/data2/dat_days_%s_beeps_%s_r_%s.rds",
             days, beeps, r)
   )
   
@@ -97,7 +97,7 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
                    s = dat$s, m = dat[, grepl("m", names(dat))])
   
   fit_stan <- tryCatch(
-    rstan::sampling(m_stan, data = dat_stan,
+    rstan::sampling(m_stan, data = dat_stan, seed = 13,
                     warmup = iter / 2, iter = iter, save_warmup = FALSE,
                     chains = chains, cores = cores,
                     pars = c("ar_mf", "cr_mf_s", "ar_s", "cr_s_mf",

@@ -3,6 +3,10 @@ simulation/day_model/modelout/
 simulation/day_model/data/
 simulation/beep_model/modelout/
 simulation/beep_model/data/
+simulation/day_model/modelout2/
+simulation/day_model/data2/
+simulation/beep_model/modelout2/
+simulation/beep_model/data2/
 simulation/combi_model/modelout/
 simulation/combi_model/data/
 example/data/

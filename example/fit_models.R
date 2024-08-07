@@ -52,8 +52,8 @@ getStanDat <- function(dat) {
   return(inp)
 }
 
-
-dat_selfdoub <- dat[[which(variables == "se_selfdoub")]]
+dat_selfdoub <- read.csv(paste0("example/data/datasets/", "se_selfdoub.csv"))
+# dat_selfdoub <- dat[[which(variables == "se_selfdoub")]]
 dat_selfdoub_stan <- getStanDat(dat_selfdoub)
 
 t_fit <- system.time(
@@ -85,11 +85,27 @@ t_fit <- system.time(
   out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
                          iter = fbiter, warmup = fbiter / 2, thin = thin,
                          save_warmup = FALSE,
-                         pars = c("ar_s", "cr_s_m",
-                                  "ar_m", "ar_night_m", "cr_m_s",
-                                  "ic_s", "ic_m", "resvar_s",
-                                  "resvar_m"))
+                         pars = c("ar_m", "ar_night_m", "cr_m_s",
+                                  "ar_s", "cr_s_m",
+                                  "ic_s", "ic_m", "resvar_m1", "resvar_m",
+                                  "resvar_s"))
 )
+saveRDS(out, "example/results/beep_model/stan_fit.rds")
+
+###### beep model all day
+
+mod_stan <- rstan::stan_model(model_code = getStanModel(model = "beep_all_day"))
+
+t_fit <- system.time(
+  out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
+                         iter = fbiter, warmup = fbiter / 2, thin = thin,
+                         save_warmup = FALSE,
+                         pars = c("ar_m", "ar_night_m", "cr_m_s",
+                                  "ar_s", "cr_s_m",
+                                  "ic_m", "ic_s", "resvar_m1", "resvar_m",
+                                  "resvar_s"))
+)
+saveRDS(out, "example/results/beep_model/stan_fit_all_day.rds")
 
 # Combination Model
 ## Mplus

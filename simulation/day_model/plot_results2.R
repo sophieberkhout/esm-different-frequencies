@@ -1,8 +1,8 @@
-df <- readRDS("simulation/beep_model/simulation_results.rds")
+df <- readRDS("simulation/day_model/simulation_results2.rds")
 
 cols <- c("#D81B60", "#1E88E5", "#FFC107")
 
-df_plot <- subset(df, par %in% c("ar_m","ar_night_m", "cr_m_s", "ar_s", "cr_s_mf"))
+df_plot <- subset(df, par %in% c("ar_mf", "cr_mf_s", "ar_s", "cr_s_mf"))
 
 df_plot$beeps <- as.factor(df_plot$beeps)
 df_plot$days <- as.factor(df_plot$days)
@@ -15,24 +15,23 @@ df_plot_long$diagnostic <- factor(df_plot_long$diagnostic,
                                   labels = c("Bias", "MAE", "Coverage"))
 
 df_plot_long$par <- factor(df_plot_long$par,
-                           levels = c("ar_m", "ar_night_m", "cr_m_s", "ar_s", "cr_s_mf"),
-                           labels = c(expression(phi["m"]),
-                                      expression(gamma["m"]),
-                                      expression(beta["m,s"]),
-                                      expression(phi[s]),
-                                      expression(beta["s,m"])))
+                           levels = c("ar_mf", "cr_mf_s", "ar_s", "cr_s_mf"),
+                           labels = c(expression(phi["MF"]),
+                                      expression(beta["MF"]),
+                                      expression(phi[S]),
+                                      expression(beta["S"])))
 
 df_axis <- data.frame(diagnostic = unique(df_plot_long$diagnostic),
-                      ymin = c(-0.1, 0, .92), ymax = c(0.1, 0.25, 1),
+                      ymin = c(-0.3, 0, .92), ymax = c(0.3, 1.5, 1),
                       hline = c(0, 0, 0.95))
 
 yBreaks <- function(x) {
   if (mean(x) < 0.1) {
-    seq(-0.1, 0.1, 0.05)
+    seq(-0.3, 0.3, 0.15)
   } else if (mean(x) > 0.9) {
     seq(.92, 1, 0.02)
   } else {
-    seq(0, 0.25, 0.05)
+    seq(0, 1.5, 0.25)
   }
 }
 
@@ -63,12 +62,12 @@ p <- ggplot2::ggplot(df_plot_long) +
   ggplot2::scale_y_continuous(breaks = yBreaks) +
   ggplot2::geom_segment(data = df_axis,
                         ggplot2::aes(x = -Inf, xend = -Inf, y = ymin, yend = ymax),
-                        linewidth = 0.5, lineend = "square") +
+                        linewidth = 0.3, lineend = "square") +
   ggplot2::geom_segment(x = 1, xend = 4, y = -Inf, yend = -Inf,
-                        linewidth = 0.5, lineend = "square")
+                        linewidth = 0.3, lineend = "square")
 
-ggplot2::ggsave("simulation/beep_model/parameter_recovery.pdf", p,
-                width = 7.5, height = 4)
+ggplot2::ggsave("simulation/day_model/parameter_recovery2.pdf", p,
+                width = 6, height = 4)
 
 
 df_plot <- subset(df, grepl("ic_m", par))
@@ -84,19 +83,19 @@ df_plot_long$diagnostic <- factor(df_plot_long$diagnostic,
                                   labels = c("Bias", "MAE", "Coverage"))
 
 df_plot_long$par <- factor(df_plot_long$par,
-                           labels = c(expression(alpha["m,1"]),
-                                      expression(alpha["m,2"]),
-                                      expression(alpha["m,3"]),
-                                      expression(alpha["m,4"]),
-                                      expression(alpha["m,5"]),
-                                      expression(alpha["m,6"]),
-                                      expression(alpha["m,7"]),
-                                      expression(alpha["m,8"]),
-                                      expression(alpha["m,9"])))
+                           labels = c(expression(mu["M,1"]),
+                                      expression(mu["M,2"]),
+                                      expression(mu["M,3"]),
+                                      expression(mu["M,4"]),
+                                      expression(mu["M,5"]),
+                                      expression(mu["M,6"]),
+                                      expression(mu["M,7"]),
+                                      expression(mu["M,8"]),
+                                      expression(mu["M,9"])))
 
 df_axis <- data.frame(diagnostic = unique(df_plot_long$diagnostic),
-                      ymin = c(-0.03, 0, .92), ymax = c(0.03, 0.3, 1),
-                      hline = c(0, 0, 1))
+                      ymin = c(-0.03, 0, .92), ymax = c(0.03, 0.5, 1),
+                      hline = c(0, 0, 0.95))
 
 yBreaks <- function(x) {
   if (mean(x) < 0.1) {
@@ -104,7 +103,7 @@ yBreaks <- function(x) {
   } else if (mean(x) > 0.9) {
     seq(.92, 1, 0.02)
   } else {
-    seq(0, 0.3, 0.05)
+    seq(0, 0.5, 0.1)
   }
 }
 
@@ -141,7 +140,5 @@ p_ic <- ggplot2::ggplot(df_plot_long) +
   ggplot2::geom_segment(x = 1, xend = 4, y = -Inf, yend = -Inf,
                         linewidth = 0.3, lineend = "square")
 
-ggplot2::ggsave("simulation/beep_model/parameter_recovery_ic.pdf", p_ic,
+ggplot2::ggsave("simulation/day_model/parameter_recovery_ic2.pdf", p_ic,
                 width = 10, height = 4)
-
-       

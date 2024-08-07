@@ -79,6 +79,9 @@ variables[ifelse(is.na(n_sig), FALSE, n_sig > 2)] # "mood_doubt"   "mood_enthus"
 # "mood_lonely"  "mood_satisfi" "mood_strong"  "pat_restl"    "pat_worry"
 # "se_ashamed"   "se_handle"    "se_selfdoub"  "se_selflike" 
 
+out_stan <- readRDS("example/results/beep_model/stan_fit.rds")
+df_stan <- rstan::summary(out_stan)$summary
+
 
 sig <- matrix(nrow = n, ncol = 16)
 for (i in 1:n) {
@@ -96,3 +99,6 @@ variables[is.na(n_sig)] # "phy_dizzy"    "phy_drymouth" "phy_nauseous"
 variables[ifelse(is.na(n_sig), FALSE, n_sig > 3)] # "mood_cheerf"  "mood_down"
 # "mood_enthus" "mood_satisfi" "mood_strong" "pat_worry" 
 # "se_ashamed" "se_selfdoub"
+
+out_stan <- readRDS("example/results/combi_model/stan_fit.rds")
+df_stan <- rstan::summary(out_stan)$summary
