@@ -38,11 +38,11 @@ yBreaks <- function(x) {
 
 p <- ggplot2::ggplot(df_plot_long) +
   ggplot2::geom_hline(data = df_axis, ggplot2::aes(yintercept = hline), linewidth = 0.5, alpha = 0.2) +
-  # ggplot2::geom_line(ggplot2::aes(x = days, y = value, colour = beeps, group = interaction(beeps, software), linetype = software), linewidth = 1) +
-  ggplot2::geom_line(ggplot2::aes(x = days, y = value, colour = beeps, group = beeps), linewidth = 1) +
-  ggplot2::geom_point(ggplot2::aes(x = days, y = value, colour = beeps), size = 2, stroke = 1) +
+  ggplot2::geom_line(ggplot2::aes(x = days, y = value, colour = beeps, group = interaction(beeps, software), linetype = software), linewidth = 1) +
+  # ggplot2::geom_line(ggplot2::aes(x = days, y = value, colour = beeps, group = beeps), linewidth = 1) +
+  ggplot2::geom_point(ggplot2::aes(x = days, y = value, colour = beeps, fill = software, shape = software), size = 2, stroke = 1) +
   ggplot2::scale_shape_manual(values = c(19, 21)) +
-  # ggplot2::scale_fill_manual(values = c("transparent", "white")) +
+  ggplot2::scale_fill_manual(values = c("transparent", "white")) +
   ggplot2::scale_colour_manual(values = cols) +
   ggplot2::facet_grid(cols = ggplot2::vars(par), rows = ggplot2::vars(diagnostic), scales = "free_y", labeller = ggplot2::label_parsed) +
   ggplot2::labs(x = "Days", colour = "Beeps") +

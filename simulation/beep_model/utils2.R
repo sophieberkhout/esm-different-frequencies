@@ -222,7 +222,9 @@ readMplusResults <- function (r, days, beeps, modelout, true) {
     df <- subset(fit$parameters$unstandardized,
                  # paramHeader == "C_M.ON" | paramHeader == "C_S.ON" | paramHeader == "Intercepts" | (paramHeader == "Residual.Variances" & param != "S"), 
                  select = c("est", "posterior_sd", "lower_2.5ci", "upper_2.5ci"))
-    idx <- c(5, 1:4, 13, 14, 24, 23)
+    if (beeps == 3) idx <- c(9, 5:8, 12, 11, 19, 20, 22)
+    if (beeps == 5) idx <- c(11, 7:10, 16, 15, 27, 28, 32)
+    if (beeps == 9) idx <- c(15, 11:14, 24, 23, 43, 44, 52)
     df  <- df[idx, ]
     names(df) <- c("median", "sd", "lower", "upper")
     

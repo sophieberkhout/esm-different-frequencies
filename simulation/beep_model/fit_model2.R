@@ -4,7 +4,7 @@ cores <- 1
 thin <- 10
 defaultPriors <- TRUE
 
-n_threads <- 20
+n_threads <- 36
 
 clus <- parallel::makeCluster(n_threads)
 
@@ -16,8 +16,8 @@ modelout <- paste0("simulation/beep_model/modelout2")
 
 load("simulation/beep_model/simulation_settings2.RData")
 
-days <- n_days[1]
-# for (days in n_days) {
+n_days <- n_days[2:4]
+for (days in n_days) {
   for(beeps in n_beeps) {
 
     m_mplus <- .mplusSpecification(beeps = beeps, proc = cores, chains = chains,
@@ -34,7 +34,7 @@ days <- n_days[1]
     )
 
   }
-# }
+}
 
 # m_stan <- rstan::stan_model("simulation/beep_model/beep_model_centering.stan")
 # for (days in n_days) {
