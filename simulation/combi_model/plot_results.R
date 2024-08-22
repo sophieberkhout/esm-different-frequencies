@@ -30,16 +30,16 @@ df_plot_long$par <- factor(df_plot_long$par,
                                       expression(delta["S"])))
 
 df_axis <- data.frame(diagnostic = unique(df_plot_long$diagnostic),
-                      ymin = c(-0.3, 0, .92), ymax = c(0.3, 1.5, 1),
-                      hline = c(0, 0, 1))
+                      ymin = c(-0.3, 0, .85), ymax = c(0.3, 1.2, 1),
+                      hline = c(0, 0, .95))
 
 yBreaks <- function(x) {
   if (mean(x) < 0.1) {
     seq(-0.3, 0.3, 0.15)
   } else if (mean(x) > 0.9) {
-    seq(.92, 1, 0.02)
+    seq(.85, 1, 0.025)
   } else {
-    seq(0, 1.5, 0.25)
+    seq(0, 1.2, 0.2)
   }
 }
 
@@ -105,8 +105,8 @@ p <- ggplot2::ggplot(df_plot_long) +
   ggplot2::geom_segment(x = 1, xend = 4, y = -Inf, yend = -Inf,
                         linewidth = 0.3, lineend = "square")
 
-ggplot2::ggsave("simulation/day_model/parameter_recovery.pdf", p,
-                width = 6, height = 4)
+ggplot2::ggsave("simulation/combi_model/parameter_recovery.pdf",
+                width = 10, height = 4)
 
 
 df_plot <- subset(df, grepl("ic_m", par))
