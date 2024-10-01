@@ -1,61 +1,60 @@
+# set working directory and create folders if they do not exist
 setwd("D:/Users/berkh011/Documents/GitHub/esm-different-frequencies")
+dir.create("example/results/")
+dir.create("example/results/beep_model/")
+dir.create("example/results/beep_model/modelout/")
+dir.create("example/results/day_model/")
+dir.create("example/results/day_model/modelout/")
+dir.create("example/results/combi_model/")
+dir.create("example/results/combi_model/modelout/")
 
+# get list of data set per vraiable
 datasets <- list.files("example/data/datasets/")
+# extract variable names
 variables <- substr(datasets, 1, nchar(datasets) - 4)
+# number of variables
 n <- length(datasets)
 
+# parallellize
 clus <- parallel::makeCluster(n)
 
 source("example/utils.R")
 
+# read data sets
 dat <- parallel::parLapplyLB(cl = clus, 1:n, readData, datasets)
 
-proc <- 1
-chains <- 4
-thin <- 10
-fbiter <- 20000
+# estimation settings
+proc <- 1       # number of cores
+chains <- 4     # number of Markov chains
+thin <- 10      # thinning
+fbiter <- 20000 # number of iterations
 
 # Day-to-Day Model
 ## Mplus
+
+# set up Mplus model code per variable
 mod_mplus <- parallel::parLapplyLB(cl = clus, 1:n, getMplusModel,
                                    model = "day", dat = dat,
                                    proc = proc, chains = chains,
                                    thin = thin, fbiter = fbiter)
 
+# fit Mplus per variable
 t_fit <- system.time(
   parallel::parLapplyLB(cl = clus, 1:n, fitMplusModel,
                         modelout = "example/results/day_model/modelout/",
                         mod = mod_mplus, variables = variables)
 )
 
-# code_stan <- getStanModel(model = "day")
+## Stan
+
+# compile Stan model
 mod_stan <- rstan::stan_model(model_code = getStanModel(model = "day"))
 
-getStanDat <- function(dat) {
-  s <- dat$s
-  m <- as.matrix(dat[, grepl("m", names(dat))])
-  
-  i_mis_s <- which(is.na(s))
-
-  mis_m <- apply(m, 2, function(x) which(is.na(x)))
-  row_mis_m <- unlist(mis_m)
-  col_mis_m <- rep(1:ncol(m), times = lengths(mis_m))
-  
-  s[i_mis_s] <- 999
-  m[cbind(row_mis_m, col_mis_m)] <- 999
-  
-  inp <- list(
-    n_days = nrow(dat), n_beeps = ncol(m), s_obs = s, m_obs = m,
-    n_mis_s = length(i_mis_s), i_mis_s = i_mis_s,
-    n_mis_m = length(row_mis_m), row_mis_m = row_mis_m, col_mis_m = col_mis_m
-  )
-  return(inp)
-}
-
+# read self-doubt data and put in Stan format
 dat_selfdoub <- read.csv(paste0("example/data/datasets/", "se_selfdoub.csv"))
-# dat_selfdoub <- dat[[which(variables == "se_selfdoub")]]
 dat_selfdoub_stan <- getStanDat(dat_selfdoub)
 
+# fit Stan
 t_fit <- system.time(
   out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
                          iter = fbiter, warmup = fbiter / 2, thin = thin,
@@ -65,13 +64,19 @@ t_fit <- system.time(
                                   "resvar_mf", "resvar_m"))
 )
 
+# save results
+saveRDS(out, "example/results/day_model/stan_fit.rds")
+
 # Beep-to-Beep Model
 ## Mplus
+
+# set up Mplus model code per variable
 mod <- parallel::parLapplyLB(cl = clus, 1:n, getMplusModel,
                              model = "beep", dat = dat,
                              proc = proc, chains = chains,
                              thin = thin, fbiter = fbiter)
 
+# fit Mplus per variable
 t_fit <- system.time(
   parallel::parLapplyLB(cl = clus, 1:n, fitMplusModel,
                         modelout = "example/results/beep_model/modelout/",
@@ -79,8 +84,11 @@ t_fit <- system.time(
 )
 
 ## Stan
+
+# compile Stan model
 mod_stan <- rstan::stan_model(model_code = getStanModel(model = "beep"))
 
+# fit Stan
 t_fit <- system.time(
   out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
                          iter = fbiter, warmup = fbiter / 2, thin = thin,
@@ -90,12 +98,39 @@ t_fit <- system.time(
                                   "ic_s", "ic_m", "resvar_m1", "resvar_m",
                                   "resvar_s"))
 )
+
+# save results
 saveRDS(out, "example/results/beep_model/stan_fit.rds")
 
-###### beep model all day
+###### Beep-to-Beep Model Extra Analysis
+###### cr_m_s for all beeps (self-doubt beep regressed on morning sleep quality)
 
+## Mplus
+# which is self-doubt
+r_selfdoub <- which(variables == "se_selfdoub")
+
+# set up Mplus model code
+mod_all_day <- getMplusModel(r_selfdoub,
+                     model = "beep_all_day", dat = dat,
+                     proc = proc, chains = chains,
+                     thin = thin, fbiter = fbiter)
+
+# fit Mplus
+t_fit <- system.time(
+  MplusAutomation::mplusModeler(
+    object = mod_all_day,
+    modelout = "example/results/beep_model/modelout/se_selfdoub_all_day.inp",
+    run = 1,
+    hashfilename = FALSE
+  )
+)
+
+## Stan
+
+# compile Stan model
 mod_stan <- rstan::stan_model(model_code = getStanModel(model = "beep_all_day"))
 
+# fit Stan
 t_fit <- system.time(
   out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
                          iter = fbiter, warmup = fbiter / 2, thin = thin,
@@ -105,15 +140,20 @@ t_fit <- system.time(
                                   "ic_m", "ic_s", "resvar_m1", "resvar_m",
                                   "resvar_s"))
 )
+
+# save results
 saveRDS(out, "example/results/beep_model/stan_fit_all_day.rds")
 
 # Combination Model
 ## Mplus
+
+# set up Mplus model code per variable
 mod <- parallel::parLapplyLB(cl = clus, 1:n, getMplusModel,
                              model = "combi", dat = dat,
                              proc = proc, chains = chains,
                              thin = thin, fbiter = fbiter)
 
+# fit Mplus per variable
 t_fit <- system.time(
   parallel::parLapplyLB(cl = clus, 1:n, fitMplusModel,
                         modelout = "example/results/combi_model/modelout/",
@@ -121,8 +161,11 @@ t_fit <- system.time(
 )
 
 ## Stan
+
+# compile Stan model
 mod_stan <- rstan::stan_model(model_code = getStanModel(model = "combi"))
 
+# fit Stan
 t_fit <- system.time(
   out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
                          iter = fbiter, warmup = fbiter / 2, thin = thin,
@@ -134,15 +177,8 @@ t_fit <- system.time(
                                   "resvar_m"))
 )
 
-t_fit <- system.time(
-  out <- rstan::sampling(mod_stan, data = dat_selfdoub_stan, seed = 13,
-                         iter = 50000, warmup = 25000, thin = thin,
-                         save_warmup = FALSE,
-                         pars = c("ar_s", "cr_s_mf", "cr_s_m",
-                                  "ar_mf", "cr_mf_s",
-                                  "ar_m", "ar_night_m", "cr_m_s",
-                                  "ic_s", "ic_m", "resvar_s", "resvar_mf",
-                                  "resvar_m"))
-)
+# save results
+saveRDS(out, "example/results/combi_model/stan_fit.rds")
 
+# end parallelization
 parallel::stopCluster(clus)

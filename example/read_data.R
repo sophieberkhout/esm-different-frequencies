@@ -1,3 +1,13 @@
+# data available at https://osf.io/j4fg8/
+# Kossakowski, J. J., Groot, P. C., Haslbeck, J. M. B., Borsboom, D., & Wichers, M. (2017).
+# Data from ‘Critical Slowing Down as a Personalized Early Warning Signal for Depression.’
+# Journal of Open Psychology Data, 5, 1. https://doi.org/10.5334/jopd.29
+
+dir.create("example/data/")
+dir.create("example/data/datasets")
+
+# to run code below, add data file named 'ESMdata.csv' to folder "example/data/"
+
 dat_raw <- read.csv("example/data/ESMdata.csv")
 
 # keep get only last phase of the study (post treatment)
@@ -49,9 +59,12 @@ for (i in variables) {
   
 }
 
-length(sleep) - sum(is.na(sleep)) # number of observations in sleep variable
+# number of observations in sleep variable
+length(sleep) - sum(is.na(sleep))
+# number of observations in self-doubt variable
 length(dat$se_selfdoub) - sum(is.na(dat$se_selfdoub))
 
+# average number of observations per day in self-doubt variable
 obs_selfdoub <- numeric()
 for (i in 1:length(date_range)) {
   sd_day <- dat[dat$date == date_range[i], "se_selfdoub"]
