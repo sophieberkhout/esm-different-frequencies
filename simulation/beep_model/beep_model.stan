@@ -13,15 +13,16 @@ parameters {
   real ar_night_m;              // night autoregression for m
   real cr_m_s;                  // crossregression for m
   real ic_m;                    // intercept for m
-  real<lower=0>resvar_m;        // residual variance for dm
+  real<lower=0>resvar_m1;       // residual variance for m first beep
+  real<lower=0>resvar_m;        // residual variance for m
 }
 model {
-  // dynamic model with imputed variables
-  m[2:n_days, 1] ~ normal(ic_m + ar_night_m * m[1:(n_days - 1), n_beeps] + cr_m_s * s[2:n_days], sqrt(resvar_m));
-  s[2:n_days] ~ normal(ic_s + ar_s * s[1:(n_days - 1)] + cr_s_m * m[1:(n_days - 1), n_beeps], sqrt(resvar_s));
+  // dynamic model
+  m[2:n_days, 1] ~ normal(ic_m + ar_night_m * (m[1:(n_days - 1), n_beeps] - ic_m) + cr_m_s * (s[2:n_days] - ic_s), sqrt(resvar_m1));
+  s[2:n_days] ~ normal(ic_s + ar_s * (s[1:(n_days - 1)] - ic_s) + cr_s_m * (m[1:(n_days - 1), n_beeps] - ic_m), sqrt(resvar_s));
   
   for (b in 2:n_beeps) {
-    m[, b] ~ normal(ic_m + ar_m * m[, (b - 1)], sqrt(resvar_m));
+    m[, b] ~ normal(ic_m + ar_m * (m[, (b - 1)] - ic_m), sqrt(resvar_m));
   }
 
   // priors
@@ -36,6 +37,7 @@ model {
   
     // residuals
   resvar_s ~ inv_gamma(0.001, 0.001);
+  resvar_m1 ~ inv_gamma(0.001, 0.001);
   resvar_m ~ inv_gamma(0.001, 0.001);
 }
 

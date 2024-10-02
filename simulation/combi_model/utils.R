@@ -46,24 +46,6 @@ simulateData <- function (r, days, beeps, burnin, pars, file) {
   )
 }
 
-# stanData <- function (s_obs, m_obs) {
-#   s_miss_i <- which(is.na(s_obs))
-#   m_miss_i <- which(is.na(m_obs), arr.ind = TRUE)
-#   s_miss_n <- length(s_miss_i)
-#   m_miss_n <- nrow(m_miss_i)
-# 
-#   s_obs[is.na(s_obs)] <- -99
-#   m_obs[is.na(m_obs)] <- -99
-# 
-#   inp <- list(D = nrow(m_obs), B = ncol(m_obs),
-#               s_obs = s_obs, m_obs = m_obs,
-#               s_miss_n = s_miss_n, s_miss_i = s_miss_i,
-#               m_miss_n = m_miss_n,
-#               m_miss_row = m_miss_i[, 1], m_miss_col = m_miss_i[, 2])
-# 
-#   return(inp)
-# }
-
 fitMplusModel <- function (r, days, beeps, m_mplus, iter, chains, cores, modelout) {
   
   dat <- readRDS(
@@ -140,14 +122,14 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
   
   MODEL <- sprintf("
     m_factor BY m1-m%1$s@1 (&1); ! day factor of beeps
-    m_factor(resvar_mf);       ! day factor residual variance
+    m_factor(resvar_mf);         ! day factor residual variance
   
+    ! get residuals through factor structure
     %3$s \n
-    r_m%1$s BY m%1$s (&1);
-    m1-m%1$s@0.01;
-    r_m1-r_m%1$s(resvar_m1-resvar_m%1$s);
-    [m1-m%1$s](ic_m1-ic_m%1$s);       ! intercepts for beeps
-  
+    r_m%1$s BY m%1$s (&1);        ! last beep is lagged
+    m1-m%1$s@0.01;                ! set residual variances close to zero (0.01)
+    r_m1-r_m%1$s(resvar_m1-resvar_m%1$s); residual variances for beeps
+    [m1-m%1$s](ic_m1-ic_m%1$s);   ! intercepts for beeps
     c_s BY s (&1);                ! center s
     [s](ic_s);                    ! s intercept
     s@0.01;                       ! residual variance of s close to zero
@@ -163,13 +145,17 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
     c_s ON m_factor&1(cr_s_mf);
     c_s ON r_m%1$s&1(cr_s_m);
   
+    ! first beep regressed on last beep yesterday and sleep quality today
     r_m1 ON r_m%1$s&1(ar_night_m);
     r_m1 ON c_s(cr_m_s);
+    
+    ! day beep autoregression
     r_m2-r_m%1$s PON r_m1-r_m%2$s(ar_m);
   
     m_factor WITH r_m%1$s@0;
   ", beeps, beeps - 1,
-     as.character(paste(sprintf("r_m%1$s BY m%1$s;", 1:(beeps - 1)), collapse = " \n ")))
+     as.character(paste(sprintf("r_m%1$s BY m%1$s;", 1:(beeps - 1)),
+                        collapse = " \n ")))
   
   PRIORS <- NULL
   if (!defaultPriors) {
@@ -214,13 +200,19 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
 
 readMplusResults <- function (r, days, beeps, modelout, true) {
   out <- tryCatch({
-    fit <- MplusAutomation::readModels(sprintf("%s/mplus/fit_days_%s_beeps_%s_r_%s.out",
-                                               modelout, days, beeps, r))
+    fit <- MplusAutomation::readModels(
+      sprintf("%s/mplus/fit_days_%s_beeps_%s_r_%s.out",
+              modelout, days, beeps, r))
 
     df <- subset(fit$parameters$unstandardized,
-                 paramHeader == "M_FACTOR.ON" | paramHeader == "C_S.ON" | paramHeader == "Intercepts" | (paramHeader == "Residual.Variances" & param != "S"), 
-                 select = c("est", "posterior_sd", "lower_2.5ci", "upper_2.5ci"))
+                 select = c("est", "posterior_sd",
+                            "lower_2.5ci", "upper_2.5ci"))
     
+    # awkward code to get parameters in right order
+    if (beeps == 3) idx <- c(8, 15, 13, 9, 14, 10:12, 19:21, 18, 27:29, 26, 30)
+    if (beeps == 5) idx <- c(12, 19, 17, 13, 18, 14:16, 25:29, 24, 37:41, 36, 42)
+    if (beeps == 9) idx <- c(20, 27, 25, 21, 26, 22:24, 37:45, 36, 57:65, 56, 66)
+    df  <- df[idx, ]
     names(df) <- c("median", "sd", "lower", "upper")
     
     df$true <- true
@@ -237,12 +229,6 @@ readStanResults <- function (r, days, beeps, modelout, true) {
                            modelout, days, beeps, r))
     
     sfit <- rstan::summary(fit)$summary
-    # df <- sfit[-nrow(sfit), c("50%", "sd", "2.5%", "97.5%")]
-    
-    # have to use annoying idx to get same order of pars...
-    # if (beeps == 3) idx <- c(3:4, 1:2, 5:8, 11:13, 10, 9)
-    # if (beeps == 5) idx <- c(3:4, 1:2, 5:10, 13:17, 12, 11)
-    # if (beeps == 9) idx <- c(3:4, 1:2, 5:14, 17:25, 16, 15)
     df <- sfit[-nrow(sfit), c("50%", "sd", "2.5%", "97.5%")]
     df <- as.data.frame(df)
     names(df) <- c("median", "sd", "lower", "upper")
@@ -266,7 +252,8 @@ diagnostics <- function (reps, res, true) {
   coverage_total <- sapply(1:reps, .coverage, res = res, true = true)
   coverage <- apply(coverage_total, 1, .proportion)
   
-  df <- data.frame(par = names(true), bias = bias, mae = mae, coverage = coverage)
+  df <- data.frame(par = names(true), bias = bias,
+                   mae = mae, coverage = coverage)
   
   return(df)
   

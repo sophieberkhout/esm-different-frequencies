@@ -5,20 +5,20 @@ data {
   matrix[n_days, n_beeps] m;      // measurement of beeps
 }
 parameters {
-  vector[n_days] m_factor;      // latent day constant
+  vector[n_days] m_factor;      // mood factor
   real ic_s;                    // intercept for s
   real ar_s;                    // autoregression for s
-  real cr_s_mf;                 // cross-lagged regression for s
-  real cr_s_m;
+  real cr_s_mf;                 // cross-lagged regression of s on mf
+  real cr_s_m;                  // cross-lagged regression of s om m
   real<lower=0> resvar_s;       // residual variance for s
-  real ar_mf;
-  real cr_mf_s;
-  real<lower=0> resvar_mf;
-  real ar_m;                    // autoregression for m
-  real ar_night_m;
+  real ar_mf;                   // autoregression for mf
+  real cr_mf_s;                 // crossregression for mf
+  real<lower=0> resvar_mf;      // residual variance for mf
+  real ar_m;                    // daytime autoregression for m
+  real ar_night_m;              // nighttime autoregression for m
   real cr_m_s;                  // crossregression for m
   vector[n_beeps] ic_m;               // intercepts for m
-  vector<lower=0>[n_beeps] resvar_m;  // residual variance for m
+  vector<lower=0>[n_beeps] resvar_m;  // residual variances for m
 }
 model {
   // dynamic model

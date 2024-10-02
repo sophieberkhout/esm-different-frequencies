@@ -38,24 +38,6 @@ simulateData <- function (r, days, beeps, burnin, pars, file) {
   )
 }
 
-# stanData <- function (s_obs, m_obs) {
-#   s_miss_i <- which(is.na(s_obs))
-#   m_miss_i <- which(is.na(m_obs), arr.ind = TRUE)
-#   s_miss_n <- length(s_miss_i)
-#   m_miss_n <- nrow(m_miss_i)
-# 
-#   s_obs[is.na(s_obs)] <- -99
-#   m_obs[is.na(m_obs)] <- -99
-# 
-#   inp <- list(D = nrow(m_obs), B = ncol(m_obs),
-#               s_obs = s_obs, m_obs = m_obs,
-#               s_miss_n = s_miss_n, s_miss_i = s_miss_i,
-#               m_miss_n = m_miss_n,
-#               m_miss_row = m_miss_i[, 1], m_miss_col = m_miss_i[, 2])
-# 
-#   return(inp)
-# }
-
 fitMplusModel <- function (r, days, beeps, m_mplus, iter, chains, cores, modelout) {
   
   dat <- readRDS(
@@ -97,7 +79,7 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
                    s = dat$s, m = dat[, grepl("m", names(dat))])
   
   fit_stan <- tryCatch(
-    rstan::sampling(m_stan, data = dat_stan,
+    rstan::sampling(m_stan, data = dat_stan, seed = 13,
                     warmup = iter / 2, iter = iter, save_warmup = FALSE,
                     chains = chains, cores = cores,
                     pars = c("ar_mf", "cr_mf_s", "ar_s", "cr_s_mf",
@@ -131,22 +113,22 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
   
   MODEL <- sprintf("
   ! latent structure beeps
-  m_factor BY m1-m%1$s@1 (&1);      ! day mean of beeps
+  m_factor BY m1-m%1$s@1 (&1);      ! day factor of beeps
   [m1-m%1$s](ic_m1-ic_m%1$s);       ! intercepts of beeps
   m1-m%1$s(resvar_m1-resvar_m%1$s); ! residual variances of beeps
   m_factor(resvar_mf);              ! residual variance of day factor
   
   ! center s
   c_s BY s (&1); ! centered variable s
-  [s](ic_s);    ! intercept of s
-  s@0.01;          ! residual variance of s set to zero (0.001)
+  [s](ic_s);     ! intercept of s
+  s@0.01;        ! residual variance of s set to zero (0.01)
   c_s(resvar_s); ! residual variance of cs
 
-  ! day constant regressed on preceding day constant and sleep quality last night
+  ! day factor regressed on preceding day factor and sleep quality last night
   m_factor ON m_factor&1(ar_mf);
   m_factor ON c_s(cr_mf_s);
   
-  ! sleep quality regressed on day mean yesterday and sleep yesterday
+  ! sleep quality regressed on day factor yesterday and sleep yesterday
   c_s ON c_s&1(ar_s);
   c_s ON m_factor&1(cr_s_mf);
   ", beeps)
@@ -190,8 +172,9 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
 
 readMplusResults <- function (r, days, beeps, modelout, true) {
   out <- tryCatch({
-    fit <- MplusAutomation::readModels(sprintf("%s/mplus/fit_days_%s_beeps_%s_r_%s.out",
-                                               modelout, days, beeps, r))
+    fit <- MplusAutomation::readModels(
+      sprintf("%s/mplus/fit_days_%s_beeps_%s_r_%s.out",
+              modelout, days, beeps, r))
 
     df <- subset(fit$parameters$unstandardized,
                  paramHeader == "M_FACTOR.ON" | paramHeader == "C_S.ON" | paramHeader == "Intercepts" | (paramHeader == "Residual.Variances" & param != "S"), 
@@ -213,13 +196,6 @@ readStanResults <- function (r, days, beeps, modelout, true) {
                            modelout, days, beeps, r))
     
     sfit <- rstan::summary(fit)$summary
-    # df <- sfit[-nrow(sfit), c("50%", "sd", "2.5%", "97.5%")]
-    
-    # have to use annoying idx to get same order of pars...
-    # if (beeps == 3) idx <- c(3:4, 1:2, 5:8, 11:13, 10, 9)
-    # if (beeps == 5) idx <- c(3:4, 1:2, 5:10, 13:17, 12, 11)
-    # if (beeps == 9) idx <- c(3:4, 1:2, 5:14, 17:25, 16, 15)
-    # df <- sfit[idx, c("50%", "sd", "2.5%", "97.5%")]
     df <- sfit[-nrow(sfit), c("50%", "sd", "2.5%", "97.5%")]
     df <- as.data.frame(df)
     names(df) <- c("median", "sd", "lower", "upper")
@@ -243,7 +219,8 @@ diagnostics <- function (reps, res, true) {
   coverage_total <- sapply(1:reps, .coverage, res = res, true = true)
   coverage <- apply(coverage_total, 1, .proportion)
   
-  df <- data.frame(par = names(true), bias = bias, mae = mae, coverage = coverage)
+  df <- data.frame(par = names(true), bias = bias,
+                   mae = mae, coverage = coverage)
   
   return(df)
   

@@ -5,7 +5,7 @@ data {
   matrix[n_days, n_beeps] m;      // measurement of beeps
 }
 parameters {
-  vector[n_days] m_factor;      // latent day constant
+  vector[n_days] m_factor;      // mood factor
   real ic_s;                    // intercept for s
   real ar_s;                    // autoregression for s
   real cr_s_mf;                 // cross-lagged regression for s
@@ -23,7 +23,7 @@ transformed parameters {
   c_s = s - ic_s;
 }
 model {
-  // dynamic model with imputed variables
+  // dynamic model
   m_factor[2:n_days] ~ normal(ar_mf * m_factor[1:(n_days - 1)] + cr_mf_s * c_s[2:n_days], sqrt(resvar_mf));
   s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)] + cr_s_mf * m_factor[1:(n_days - 1)], sqrt(resvar_s));
 
