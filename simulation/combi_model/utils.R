@@ -128,7 +128,7 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
     %3$s \n
     r_m%1$s BY m%1$s (&1);        ! last beep is lagged
     m1-m%1$s@0.01;                ! set residual variances close to zero (0.01)
-    r_m1-r_m%1$s(resvar_m1-resvar_m%1$s); residual variances for beeps
+    r_m1-r_m%1$s(resvar_m1-resvar_m%1$s); ! residual variances for beeps
     [m1-m%1$s](ic_m1-ic_m%1$s);   ! intercepts for beeps
     c_s BY s (&1);                ! center s
     [s](ic_s);                    ! s intercept

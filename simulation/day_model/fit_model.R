@@ -15,6 +15,8 @@ evq <- parallel::clusterEvalQ(clus, source("simulation/day_model/utils.R"))
 modelout <- paste0("simulation/day_model/modelout")
 # create modelout folder if does not exist
 dir.create(modelout)
+dir.create(paste0(modelout, "/mplus/"))
+dir.create(paste0(modelout, "/stan/"))
 
 # load simulation settings
 load("simulation/day_model/simulation_settings.RData")

@@ -2,7 +2,7 @@
 reps <- 1000
 
 # create data folder if does not exist
-dir.create("simulation/day_model/data/")
+dir.create("simulation/combi_model/data/")
 
 # parallelize
 n_threads <- 25

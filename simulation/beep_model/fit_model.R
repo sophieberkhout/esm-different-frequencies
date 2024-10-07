@@ -15,6 +15,8 @@ evq <- parallel::clusterEvalQ(clus, source("simulation/beep_model/utils.R"))
 modelout <- paste0("simulation/beep_model/modelout")
 # create modelout folder if does not exist
 dir.create(modelout)
+dir.create(paste0(modelout, "/mplus/"))
+dir.create(paste0(modelout, "/stan/"))
 
 # load simulation settings
 load("simulation/beep_model/simulation_settings.RData")
