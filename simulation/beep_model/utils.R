@@ -141,6 +141,7 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
   if (!defaultPriors) {
     PRIORS <- sprintf("
     resvar_m~IG(0.001,0.001);
+    resvar_m1~IG(0.001,0.001);
     ic_m~N(0.000,100);
     ar_m~N(0.000,100);
     ar_night_m~N(0.000,100);

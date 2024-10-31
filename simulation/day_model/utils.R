@@ -112,23 +112,24 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
      ifelse(is.null(biter), "", paste0("BITER = ", biter, ";")))
   
   MODEL <- sprintf("
-  ! latent structure beeps
   m_factor BY m1-m%1$s@1 (&1);      ! day factor of beeps
-  [m1-m%1$s](ic_m1-ic_m%1$s);       ! intercepts of beeps
-  m1-m%1$s(resvar_m1-resvar_m%1$s); ! residual variances of beeps
-  m_factor(resvar_mf);              ! residual variance of day factor
+  m_factor(resvar_mf);              ! day factor residual variance
   
-  ! center s
-  c_s BY s (&1); ! centered variable s
-  [s](ic_s);     ! intercept of s
-  s@0.01;        ! residual variance of s set to zero (0.01)
-  c_s(resvar_s); ! residual variance of cs
+  [m1-m%1$s](ic_m1-ic_m%1$s);       ! m beep intercepts
+  m1-m%1$s(resvar_m1-resvar_m%1$s); ! m beep residual variances
+  
+  c_s BY s (&1); ! center s
+  [s](ic_s);     ! s intercept
+  s@0.01;        ! residual variance of s close to 0
+  c_s(resvar_s); ! centered s residual variance
 
-  ! day factor regressed on preceding day factor and sleep quality last night
+  ! day factor regressed on preceding day factor
+  ! and sleep quality last night
   m_factor ON m_factor&1(ar_mf);
   m_factor ON c_s(cr_mf_s);
   
-  ! sleep quality regressed on day factor yesterday and sleep yesterday
+  ! sleep quality regressed on day factor of yesterday
+  ! and sleep yesterday
   c_s ON c_s&1(ar_s);
   c_s ON m_factor&1(cr_s_mf);
   ", beeps)

@@ -9,6 +9,31 @@ out_mplus <- MplusAutomation::readModels(
   paste0("example/results/day_model/modelout/", "se_selfdoub", ".out")
 )
 
+########## Compute proportion measurement error variance to total variance
+## mplus
+beta_mf <- out_mplus$parameters$unstandardized[13, "est"]
+sigma_nu <-  out_mplus$parameters$unstandardized[38, "est"]
+sigma_epsilon <-  out_mplus$parameters$unstandardized[28:37, "est"]
+phi_mf <-  out_mplus$parameters$unstandardized[12, "est"]
+phi_s <-  out_mplus$parameters$unstandardized[14, "est"]
+beta_s <-  out_mplus$parameters$unstandardized[15, "est"]
+sigma_zeta <-  out_mplus$parameters$unstandardized[39, "est"]
+
+## stan
+res_stan <- rstan::summary(out_stan)$summary
+beta_mf <- res_stan["cr_mf_s", "50%"]
+sigma_nu <-  res_stan["resvar_mf", "50%"]
+sigma_epsilon <-  res_stan[grepl("resvar_m", row.names(res_stan)), "50%"][-1]
+phi_mf <-  res_stan["ar_mf", "50%"]
+phi_s <-  res_stan["ar_s", "50%"]
+beta_s <-  res_stan["cr_s_mf", "50%"]
+sigma_zeta <-  res_stan["resvar_s", "50%"]
+
+sigma_m <- (sigma_nu * (phi_s ^ 2 - 1) - beta_mf ^ 2 * sigma_zeta) /
+  (beta_mf ^ 2 * beta_s ^ 2 - (phi_mf ^ 2 - 1) * (phi_s ^ 2 - 1)) +
+  sigma_epsilon
+sigma_epsilon / sigma_m
+
 # autoregressive and cross(-lagged) effects
 # get Stan estimates of median and CI and put in data frame for plotting
 res_stan <- rstan::summary(out_stan)$summary

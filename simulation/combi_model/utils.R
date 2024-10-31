@@ -124,35 +124,39 @@ fitStanModel <- function (r, days, beeps, m_stan, iter, chains, cores, modelout)
     m_factor BY m1-m%1$s@1 (&1); ! day factor of beeps
     m_factor(resvar_mf);         ! day factor residual variance
   
-    ! get residuals through factor structure
+    ! residual of the mood variables
     %3$s \n
     r_m%1$s BY m%1$s (&1);        ! last beep is lagged
     m1-m%1$s@0.01;                ! set residual variances close to zero (0.01)
     r_m1-r_m%1$s(resvar_m1-resvar_m%1$s); ! residual variances for beeps
     [m1-m%1$s](ic_m1-ic_m%1$s);   ! intercepts for beeps
+    
     c_s BY s (&1);                ! center s
     [s](ic_s);                    ! s intercept
     s@0.01;                       ! residual variance of s close to zero
     c_s(resvar_s);                ! centered s residual variance
   
-    ! day factor regressed on preceding day factor and sleep quality last night
+    ! day factor regressed on preceding day factor
+    ! and sleep quality last night
     m_factor ON m_factor&1(ar_df);
     m_factor ON c_s(cr_df_s);
   
-    ! sleep quality regressed on day factor of yesterday and sleep yesterday
+    ! day beep autoregression
+    r_m2-r_m%1$s PON r_m1-r_m%2$s(ar_m);
+    
+    ! first beep of day regressed on last beep yesterday
+    ! and sleep last night
+    r_m1 ON r_m%1$s&1(ar_night_m);
+    r_m1 ON c_s(cr_m_s);
+    
+    ! sleep quality regressed on day factor of yesterday
+    ! and sleep yesterday
     ! and residual last beep yesterday
     c_s ON c_s&1(ar_s);
     c_s ON m_factor&1(cr_s_mf);
     c_s ON r_m%1$s&1(cr_s_m);
   
-    ! first beep regressed on last beep yesterday and sleep quality today
-    r_m1 ON r_m%1$s&1(ar_night_m);
-    r_m1 ON c_s(cr_m_s);
-    
-    ! day beep autoregression
-    r_m2-r_m%1$s PON r_m1-r_m%2$s(ar_m);
-  
-    m_factor WITH r_m%1$s@0;
+    m_factor WITH r_m%1$s@0;        ! covariance between factors to 0
   ", beeps, beeps - 1,
      as.character(paste(sprintf("r_m%1$s BY m%1$s;", 1:(beeps - 1)),
                         collapse = " \n ")))

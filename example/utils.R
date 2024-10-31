@@ -7,13 +7,6 @@ getMplusModel <- function (r, model, dat, proc = 1, chains = 2, thin = NULL, fbi
   VARIABLE <- "
     USEVARIABLES = s m1-m10;
   "
-  
-  if (model == "beep") {
-    VARIABLE <- "
-    USEVARIABLES = s m1-m10;
-    lagged = s(1) m10(1);
-  "
-  }
     
   ANALYSIS <- sprintf("
     ESTIMATOR = BAYES;
@@ -31,23 +24,25 @@ getMplusModel <- function (r, model, dat, proc = 1, chains = 2, thin = NULL, fbi
   if (model == "day") {
     MODEL <- "
       m_factor BY m1-m10@1 (&1);    ! day factor of beeps
-      m_factor(resvar_df);          ! day factor residual variance
+      m_factor(resvar_mf);          ! day factor residual variance
       
       [m1-m10](ic_m1-ic_m10);       ! m beep intercepts
       m1-m10(resvar_m1-resvar_m10); ! m beep residual variances
       
       c_s BY s (&1);                ! center s
       [s](ic_s);                    ! s intercept
-      s@0.01;                       ! residual variance of s close to zero
+      s@0.01;                       ! residual variance of s close to 0
       c_s(resvar_s);                ! centered s residual variance
-    
-      ! day factor regressed on preceding day factor and sleep quality last night
-      m_factor ON m_factor&1(ar_df);
-      m_factor ON c_s(cr_df_s);
       
-      ! sleep quality regressed on day factor of yesterday and sleep yesterday
+      ! day factor regressed on preceding day factor
+      ! and sleep quality last night
+      m_factor ON m_factor&1(ar_mf);
+      m_factor ON c_s(cr_mf_s);
+      
+      ! sleep quality regressed on day factor of yesterday
+      ! and sleep yesterday
       c_s ON c_s&1(ar_s);
-      c_s ON m_factor&1(cr_s_df);
+      c_s ON m_factor&1(cr_s_mf);
     "
   
     TITLE <- "Day-to-Day Model"
@@ -65,20 +60,21 @@ getMplusModel <- function (r, model, dat, proc = 1, chains = 2, thin = NULL, fbi
       c_m7 BY m7;
       c_m8 BY m8;
       c_m9 BY m9;
-      c_m10 BY m10 (&1);            ! last beep is lagged
-      m1-m10@0.01;                  ! residual variance of m close to zero
-      c_m1-c_m10(resvar_m);         ! same residual variance for all c_m
-      [m1-m10](ic_m);               ! same intercept for all m
+      c_m10 BY m10 (&1);        ! last beep is lagged
+      m1-m10@0.01;              ! residual variance of m close to 0
+      c_m1(resvar_m1);          ! residual variance for first c_m
+      c_m2-c_m10(resvar_m);     ! same residual variance all other c_m
+      [m1-m10](ic_m);           ! same intercept for all m
       
-      c_s BY s (&1);                ! center s
-      [s](ic_s);                    ! s intercept
-      s@0.01;                       ! residual variance of s close to zero
-      c_s(resvar_s);                ! centered s residual variance
-    
+      c_s BY s (&1);            ! center s
+      [s](ic_s);                ! s intercept
+      s@0.01;                   ! residual variance of s close to 0
+      c_s(resvar_s);            ! centered s residual variance
+      
       c_m2-c_m10 PON c_m1-c_m9(ar_m);   ! day beep autoregression
-  
+      
       c_m1 ON c_m10&1(ar_night_m);  ! night beep autoregression
-      c_m1 ON c_s(cr_m_s);          ! first beep of the day on sleep last night
+      c_m1 ON c_s(cr_m_s);          ! first beep on sleep last night
       
       c_s ON c_s&1(ar_s);           ! sleep autoregression
       c_s ON c_m10&1(cr_s_m);       ! sleep on last beep of yesterday
@@ -98,18 +94,19 @@ getMplusModel <- function (r, model, dat, proc = 1, chains = 2, thin = NULL, fbi
       c_m7 BY m7;
       c_m8 BY m8;
       c_m9 BY m9;
-      c_m10 BY m10 (&1);            ! last beep is lagged
-      m1-m10@0.01;                  ! residual variance of m close to zero
-      c_m1-c_m10(resvar_m);         ! same residual variance for all c_m
-      [m1-m10](ic_m);               ! same intercept for all m
+      c_m10 BY m10 (&1);        ! last beep is lagged
+      m1-m10@0.01;              ! residual variance of m close to 0
+      c_m1(resvar_m1);          ! residual variance for first c_m
+      c_m2-c_m10(resvar_m);      ! same residual variance all other c_m
+      [m1-m10](ic_m);           ! same intercept for all m
       
-      c_s BY s (&1);                ! center s
-      [s](ic_s);                    ! s intercept
-      s@0.01;                       ! residual variance of s close to zero
-      c_s(resvar_s);                ! centered s residual variance
-    
+      c_s BY s (&1);            ! center s
+      [s](ic_s);                ! s intercept
+      s@0.01;                   ! residual variance of s close to 0
+      c_s(resvar_s);            ! centered s residual variance
+      
       c_m2-c_m10 PON c_m1-c_m9(ar_m);   ! day beep autoregression
-  
+      
       c_m1 ON c_m10&1(ar_night_m);  ! night beep autoregression
       
       ! all self-doubt beeps on sleep last night
@@ -118,14 +115,15 @@ getMplusModel <- function (r, model, dat, proc = 1, chains = 2, thin = NULL, fbi
       c_s ON c_s&1(ar_s);           ! sleep autoregression
       c_s ON c_m10&1(cr_s_m);       ! sleep on last beep of yesterday
     "
-    TITLE <- "Beep-to-Beep Model"
+    TITLE <- "Adjusted Beep-to-Beep Model"
   }
   
   if (model == "combi") {
     MODEL <- "
-      m_factor BY m1-m10@1 (&1); ! day factor of beeps
-      m_factor(resvar_df);       ! day factor residual variance
+      m_factor BY m1-m10@1 (&1);     ! day factor of beeps
+      m_factor(resvar_mf);           ! day factor residual variance
       
+      ! residual of the mood variables
       r_m1 BY m1;
       r_m2 BY m2;
       r_m3 BY m3;
@@ -135,31 +133,37 @@ getMplusModel <- function (r, model, dat, proc = 1, chains = 2, thin = NULL, fbi
       r_m7 BY m7;
       r_m8 BY m8;
       r_m9 BY m9;
-      r_m10 BY m10 (&1);
-      m1-m10@0.01;
-      r_m1-r_m10(resvar_m1-resvar_m10);
+      r_m10 BY m10 (&1);            ! last beep is lagged
+      m1-m10@0.01;                  ! residual variance of m close to 0
+      r_m1-r_m10(resvar_m1-resvar_m10); ! residual variance of m
       [m1-m10](ic_m1-ic_m10);       ! intercepts for beeps
-
+      
       c_s BY s (&1);                ! center s
       [s](ic_s);                    ! s intercept
-      s@0.01;                       ! residual variance of s close to zero
+      s@0.01;                       ! residual variance of s close to 0
       c_s(resvar_s);                ! centered s residual variance
-    
-      ! day factor regressed on preceding day factor and sleep quality last night
-      m_factor ON m_factor&1(ar_df);
-      m_factor ON c_s(cr_df_s);
       
-      ! sleep quality regressed on day factor of yesterday and sleep yesterday
-      ! and residual last beep yesterday
-      c_s ON c_s&1(ar_s);
-      c_s ON m_factor&1(cr_s_df);
-      c_s ON r_m10&1(cr_s_m10);
+      ! day factor regressed on preceding day factor
+      ! and sleep quality last night
+      m_factor ON m_factor&1(ar_mf);
+      m_factor ON c_s(cr_mf_s);
       
-      r_m1 ON r_m10&1(ar_star_m10);
-      r_m1 ON c_s(cr_m1_s);
+      ! day beep autoregression
       r_m2-r_m10 PON r_m1-r_m9(ar_m);
       
-      m_factor WITH r_m10@0;
+      ! first beep of day regressed on last beep yesterday
+      ! and sleep last night
+      r_m1 ON r_m10&1(ar_night_m);
+      r_m1 ON c_s(cr_m_s);
+      
+      ! sleep quality regressed on day factor of yesterday
+      ! and sleep yesterday
+      ! and residual last beep yesterday
+      c_s ON c_s&1(ar_s);
+      c_s ON m_factor&1(cr_s_mf);
+      c_s ON r_m10&1(cr_s_m);
+      
+      m_factor WITH r_m10@0;        ! covariance between factors to 0
     "
     
     TITLE <- "Combination Model"
@@ -226,23 +230,32 @@ getStanModel <- function (model) {
       matrix[n_days, n_beeps] m_obs;  // measurement of beeps
       
       // missing data
-      int<lower=0, upper=n_days * n_beeps> n_mis_s;      // number of missing values in sleep
+        // number of missing values in sleep variable
+      int<lower=0, upper=n_days * n_beeps> n_mis_s;
+        // indexes of missing values in sleep variable
       int<lower=1, upper=n_days * n_beeps> i_mis_s[n_mis_s];
+        // number of missing values in mood variable
       int<lower=0, upper=n_days * n_beeps> n_mis_m;
+        // row index of missing values in mood variable
       int<lower=1, upper=n_days * n_beeps> row_mis_m[n_mis_m];
+        // column index of missing values in mood variable
       int<lower=1, upper=n_days * n_beeps> col_mis_m[n_mis_m];
     }
     parameters {
-      vector[n_days] m_factor;      // latent day constant
+      vector[n_days] m_factor;      // daily mood factor
+      real<lower=0> resvar_mf;      // residual variance for mf
+      
+      vector[n_beeps] ic_m;               // intercepts for m
+      vector<lower=0>[n_beeps] resvar_m;  // residual variance for m
+      
       real ic_s;                    // intercept for s
+      real<lower=0> resvar_s;       // residual variance for s
+      
+      real ar_mf;                   // autoregression for mf
+      real cr_mf_s;                 // crossregression for mf
+    
       real ar_s;                    // autoregression for s
       real cr_s_mf;                 // cross-lagged regression for s
-      real<lower=0> resvar_s;       // residual variance for s
-      real ar_mf;                   // autoregression for df
-      real cr_mf_s;                 // crossregression for df
-      real<lower=0> resvar_mf;      // residual variance for df
-      vector[n_beeps] ic_m;               // intercepts for d
-      vector<lower=0>[n_beeps] resvar_m;  // measurement error variance for d  
       
       // missing data
       vector[n_mis_s] mis_s;
@@ -252,22 +265,31 @@ getStanModel <- function (model) {
       vector[n_days] s;
       matrix[n_days, n_beeps] m;
       vector[n_days] c_s;
-      
+    
+      // fill s with estimated missing values
       s = s_obs;
       s[i_mis_s] = mis_s;
-      
+    
+      // center s
       c_s = s - ic_s;
-      
+    
+      // fill m with estimated missing values
       m = m_obs;
       for (i in 1:n_mis_m) {
         m[row_mis_m[i], col_mis_m[i]] = mis_m[i];
       }
     }
     model {
-      // dynamic model with imputed variables
-      m_factor[2:n_days] ~ normal(ar_mf * m_factor[1:(n_days - 1)] + cr_mf_s * c_s[2:n_days], sqrt(resvar_mf));
-      s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)] + cr_s_mf * m_factor[1:(n_days - 1)], sqrt(resvar_s));
+      // dynamic models
+      m_factor[2:n_days] ~ normal(ar_mf * m_factor[1:(n_days - 1)]
+                                  + cr_mf_s * c_s[2:n_days],
+                                  sqrt(resvar_mf));
+                                  
+      s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)]
+                           + cr_s_mf * m_factor[1:(n_days - 1)],
+                           sqrt(resvar_s));
     
+      // measurement equation
       for (b in 1:n_beeps) {
         m[, b] ~ normal(ic_m[b] + m_factor, sqrt(resvar_m[b]));
       }
@@ -281,7 +303,7 @@ getStanModel <- function (model) {
       ar_mf ~ normal(0, 100);
       cr_mf_s ~ normal(0, 100);
       
-        // residuals
+        // residual variances
       resvar_s ~ inv_gamma(0.001, 0.001);
       resvar_mf ~ inv_gamma(0.001, 0.001);
       resvar_m ~ inv_gamma(0.001, 0.001);
@@ -298,24 +320,32 @@ getStanModel <- function (model) {
       matrix[n_days, n_beeps] m_obs;  // measurement of beeps
       
       // missing data
-      int<lower=0, upper=n_days * n_beeps> n_mis_s;      // number of missing values in sleep
+        // number of missing values in sleep variable
+      int<lower=0, upper=n_days * n_beeps> n_mis_s;
+        // indexes of missing values in sleep variable
       int<lower=1, upper=n_days * n_beeps> i_mis_s[n_mis_s];
+        // number of missing values in mood variable
       int<lower=0, upper=n_days * n_beeps> n_mis_m;
+        // row index of missing values in mood variable
       int<lower=1, upper=n_days * n_beeps> row_mis_m[n_mis_m];
+        // column index of missing values in mood variable
       int<lower=1, upper=n_days * n_beeps> col_mis_m[n_mis_m];
     }
     parameters {
-      real ic_s;                    // intercept for s
-      real ar_s;                    // autoregression for s
-      real cr_s_m;                  // cross-lagged regression for s
-      real<lower=0> resvar_s;       // residual variance for s
-      real ar_m;                    // autoregression for m
-      real ar_night_m;              // night autoregression for m
-      real cr_m_s;                  // crossregression for m
       real ic_m;                    // intercept for m
       real<lower=0> resvar_m1;      // residual variance for m 
       real<lower=0> resvar_m;       // residual variance for m 
       
+      real ic_s;                    // intercept for s
+      real<lower=0> resvar_s;       // residual variance for s
+      
+      real ar_m;                    // autoregression for m
+      real ar_night_m;              // night autoregression for m
+      real cr_m_s;                  // crossregression for m
+    
+      real ar_s;                    // autoregression for s
+      real cr_s_m;                  // cross-lagged regression for s
+    
       // missing data
       vector[n_mis_s] mis_s;
       vector[n_mis_m] mis_m;
@@ -323,23 +353,44 @@ getStanModel <- function (model) {
     transformed parameters {
       vector[n_days] s;
       matrix[n_days, n_beeps] m;
-      
+      vector[n_days] c_s;
+      matrix[n_days, n_beeps] c_m;
+    
+      // fill s with estimated missing values
       s = s_obs;
       s[i_mis_s] = mis_s;
-      
+    
+      // center s
+      c_s = s - ic_s;
+    
+      // fill m with estimated missing values
       m = m_obs;
       for (i in 1:n_mis_m) {
         m[row_mis_m[i], col_mis_m[i]] = mis_m[i];
       }
+    
+      // center m
+      for (b in 1:n_beeps) {
+        c_m[, b] = m[, b] - ic_m;
+      }
     }
     model {
-      // dynamic model with imputed variables
-      m[2:n_days, 1] ~ normal(ic_m + ar_night_m * (m[1:(n_days - 1), n_beeps] - ic_m) + cr_m_s * (s[2:n_days] - ic_s), sqrt(resvar_m1));
-      s[2:n_days] ~ normal(ic_s + ar_s * (s[1:(n_days - 1)] - ic_s) + cr_s_m * (m[1:(n_days - 1), n_beeps] - ic_m), sqrt(resvar_s));
-      
+      // dynamic models
+      m[2:n_days, 1] ~ normal(ic_m 
+                              + ar_night_m
+                              * c_m[1:(n_days - 1), n_beeps]
+                              + cr_m_s * c_s[2:n_days],
+                              sqrt(resvar_m1));
+    
       for (b in 2:n_beeps) {
-        m[, b] ~ normal(ic_m + ar_m * (m[, (b - 1)] - ic_m), sqrt(resvar_m));
+        m[, b] ~ normal(ic_m + ar_m * c_m[, (b - 1)],
+                        sqrt(resvar_m));
       }
+                              
+      s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)]
+                           + cr_s_m
+                           * c_m[1:(n_days - 1), n_beeps],
+                           sqrt(resvar_s));
     
       // priors
         // regression coefficients
@@ -351,7 +402,7 @@ getStanModel <- function (model) {
       ar_night_m ~ normal(0, 100);
       cr_m_s ~ normal(0, 100);
       
-        // residuals
+        // residual variances
       resvar_s ~ inv_gamma(0.001, 0.001);
       resvar_m1 ~ inv_gamma(0.001, 0.001);
       resvar_m ~ inv_gamma(0.001, 0.001);
@@ -375,17 +426,20 @@ getStanModel <- function (model) {
       int<lower=1, upper=n_days * n_beeps> col_mis_m[n_mis_m];
     }
     parameters {
-      real ic_s;                    // intercept for s
-      real ar_s;                    // autoregression for s
-      real cr_s_m;                  // cross-lagged regression for s
-      real<lower=0> resvar_s;       // residual variance for s
-      real ar_m;                    // autoregression for m
-      real ar_night_m;              // night autoregression for m
-      vector[n_beeps] cr_m_s;       // crossregression for m
       real ic_m;                    // intercept for m
       real<lower=0> resvar_m1;      // residual variance for m 
       real<lower=0> resvar_m;       // residual variance for m 
       
+      real ic_s;                    // intercept for s
+      real<lower=0> resvar_s;       // residual variance for s
+      
+      real ar_m;                    // autoregression for m
+      real ar_night_m;              // night autoregression for m
+      vector[n_beeps] cr_m_s;       // crossregression for m
+    
+      real ar_s;                    // autoregression for s
+      real cr_s_m;                  // cross-lagged regression for s
+    
       // missing data
       vector[n_mis_s] mis_s;
       vector[n_mis_m] mis_m;
@@ -393,23 +447,44 @@ getStanModel <- function (model) {
     transformed parameters {
       vector[n_days] s;
       matrix[n_days, n_beeps] m;
-      
+      vector[n_days] c_s;
+      matrix[n_days, n_beeps] c_m;
+    
+      // fill s with estimated missing values
       s = s_obs;
       s[i_mis_s] = mis_s;
-      
+    
+      // center s
+      c_s = s - ic_s;
+    
+      // fill m with estimated missing values
       m = m_obs;
       for (i in 1:n_mis_m) {
         m[row_mis_m[i], col_mis_m[i]] = mis_m[i];
       }
+    
+      // center m
+      for (b in 1:n_beeps) {
+        c_m[, b] = m[, b] - ic_m;
+      }
     }
     model {
-      // dynamic model with imputed variables
-      m[2:n_days, 1] ~ normal(ic_m + ar_night_m * (m[1:(n_days - 1), n_beeps] - ic_m) + cr_m_s[1] * (s[2:n_days] - ic_s), sqrt(resvar_m1));
-      s[2:n_days] ~ normal(ic_s + ar_s * (s[1:(n_days - 1)] - ic_s) + cr_s_m * (m[1:(n_days - 1), n_beeps] - ic_m), sqrt(resvar_s));
-      
+      // dynamic models
+      m[2:n_days, 1] ~ normal(ic_m 
+                              + ar_night_m
+                              * c_m[1:(n_days - 1), n_beeps]
+                              + cr_m_s[1] * c_s[2:n_days],
+                              sqrt(resvar_m1));
+    
       for (b in 2:n_beeps) {
-        m[, b] ~ normal(ic_m + ar_m * (m[, (b - 1)] - ic_m) + cr_m_s[b] * (s - ic_s), sqrt(resvar_m));
+        m[, b] ~ normal(ic_m + ar_m * c_m[, (b - 1)] + cr_m_s[b] * c_s,
+                        sqrt(resvar_m));
       }
+                              
+      s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)]
+                           + cr_s_m
+                           * c_m[1:(n_days - 1), n_beeps],
+                           sqrt(resvar_s));
     
       // priors
         // regression coefficients
@@ -421,7 +496,7 @@ getStanModel <- function (model) {
       ar_night_m ~ normal(0, 100);
       cr_m_s ~ normal(0, 100);
       
-        // residuals
+        // residual variances
       resvar_s ~ inv_gamma(0.001, 0.001);
       resvar_m1 ~ inv_gamma(0.001, 0.001);
       resvar_m ~ inv_gamma(0.001, 0.001);
@@ -429,7 +504,7 @@ getStanModel <- function (model) {
   "
   }
   
-  if (model == "combi") { 
+  if (model == "combi") {
     code <- "
     data {
       int<lower=1> n_days;            // number of days
@@ -445,20 +520,25 @@ getStanModel <- function (model) {
       int<lower=1, upper=n_days * n_beeps> col_mis_m[n_mis_m];
     }
     parameters {
-      vector[n_days] m_factor;      // latent day constant
+      vector[n_days] m_factor;      // daily mood factor
+      real<lower=0> resvar_mf;      // residual variance m_factor
+      
+      vector[n_beeps] ic_m;               // intercepts for m
+      vector<lower=0>[n_beeps] resvar_m;  // residual variances for m
+      
       real ic_s;                    // intercept for s
       real ar_s;                    // autoregression for s
-      real cr_s_mf;                 // cross-lagged regression s on m_factor
-      real cr_s_m;                  // cross-lagged regression s on last beep m
-      real<lower=0> resvar_s;       // residual variance for s
-      real ar_mf;                   // autoregression for m_factor
-      real cr_mf_s;                 // crossregresson for m_factor on sleep
-      real<lower=0> resvar_mf;      // residual variance m_factor
+      
+      real ar_mf;                   // autoregression for mf
+      real cr_mf_s;                 // crossregresson for mf
+      
       real ar_m;                    // daytime autoregression for m
       real ar_night_m;              // nighttime autoregression for m
       real cr_m_s;                  // crossregression for m
-      vector[n_beeps] ic_m;               // intercepts for m
-      vector<lower=0>[n_beeps] resvar_m;  // residual variances for m
+      
+      real cr_s_mf;                 // cross-lagged regression s-mf
+      real cr_s_m;                  // cross-lagged regression s-m
+      real<lower=0> resvar_s;       // residual variance for s
       
       // missing data
       vector[n_mis_s] mis_s;
@@ -469,30 +549,47 @@ getStanModel <- function (model) {
       matrix[n_days, n_beeps] m;
       vector[n_days] c_s;
       matrix[n_days, n_beeps] c_m;
-
+    
+      // fill s with estimated missing values
       s = s_obs;
       s[i_mis_s] = mis_s;
-      
+    
+      // center s
       c_s = s - ic_s;
-      
+    
+      // fill m with estimated missing values
       m = m_obs;
       for (i in 1:n_mis_m) {
         m[row_mis_m[i], col_mis_m[i]] = mis_m[i];
       }
+      
+      // center m
       for (b in 1:n_beeps) {
         c_m[, b] = m[, b] - (ic_m[b] + m_factor);
       }
     }
     model {
-      // dynamic model with imputed variables
-      m_factor[2:n_days] ~ normal(ar_mf * m_factor[1:(n_days - 1)] + cr_mf_s * c_s[2:n_days], sqrt(resvar_mf));
-      s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)] + cr_s_m * c_m[1:(n_days - 1), n_beeps] + cr_s_mf * m_factor[1:(n_days - 1)], sqrt(resvar_s));
+      // dynamic models
+      m_factor[2:n_days] ~ normal(ar_mf * m_factor[1:(n_days - 1)]
+                                  + cr_mf_s * c_s[2:n_days],
+                                  sqrt(resvar_mf));
     
-      m[2:n_days, 1] ~ normal(ic_m[1] + m_factor[2:n_days] + ar_night_m * c_m[1:(n_days - 1), n_beeps] + cr_m_s * c_s[2:n_days], sqrt(resvar_m[1]));
-
+      m[2:n_days, 1] ~ normal(ic_m[1] + m_factor[2:n_days]
+                              + ar_night_m
+                              * c_m[1:(n_days - 1), n_beeps]
+                              + cr_m_s * c_s[2:n_days],
+                              sqrt(resvar_m[1]));
+    
+      s[2:n_days] ~ normal(ic_s + ar_s * c_s[1:(n_days - 1)]
+                           + cr_s_m * c_m[1:(n_days - 1), n_beeps]
+                           + cr_s_mf * m_factor[1:(n_days - 1)],
+                           sqrt(resvar_s));
+    
+      // measurement equation
       for (b in 2:n_beeps) {
-        m[, b] ~ normal(ic_m[b] + m_factor + ar_m * c_m[, (b - 1)], sqrt(resvar_m[b]));
-      }
+        m[, b] ~ normal(ic_m[b] + m_factor + ar_m * c_m[, (b - 1)],
+                        sqrt(resvar_m[b]));
+      }                           
     
       // priors
         // regression coefficients
@@ -507,7 +604,7 @@ getStanModel <- function (model) {
       ar_night_m ~ normal(0, 100);
       cr_m_s ~ normal(0, 100);
       
-        // residuals
+        // residual variances
       resvar_s ~ inv_gamma(0.001, 0.001);
       resvar_mf ~ inv_gamma(0.001, 0.001);
       resvar_m ~ inv_gamma(0.001, 0.001);
